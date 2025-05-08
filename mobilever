@@ -1,0 +1,188 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local flying = false
+local speed = 100
+local following = false
+local currentTarget = nil
+local followDistance = 2
+
+local bg, bv, flyConn
+
+local teleportLocations = {
+	C = Vector3.new(-450, 760, 250),
+	V = Vector3.new(100, 442, -10)
+}
+
+-- Tạo phần tử bay
+local function createFlyParts(hrp)
+	bg = Instance.new("BodyGyro")
+	bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+	bg.P = 10000
+	bg.CFrame = hrp.CFrame
+	bg.Parent = hrp
+
+	bv = Instance.new("BodyVelocity")
+	bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+	bv.Velocity = Vector3.new(0, 0, 0)
+	bv.Parent = hrp
+end
+
+local function startFlying()
+	if flying then return end
+	flying = true
+	local character = player.Character or player.CharacterAdded:Wait()
+	local hrp = character:WaitForChild("HumanoidRootPart")
+	createFlyParts(hrp)
+
+	flyConn = RunService.RenderStepped:Connect(function()
+		if not flying then return end
+		local cam = workspace.CurrentCamera
+		bg.CFrame = cam.CFrame
+		bv.Velocity = cam.CFrame.LookVector * speed
+	end)
+end
+
+local function stopFlying()
+	flying = false
+	if flyConn then flyConn:Disconnect() end
+	if bg then bg:Destroy() end
+	if bv then bv:Destroy() end
+end
+
+local function toggleFlying()
+	if flying then stopFlying() else startFlying() end
+end
+
+local function teleportCharacter(key)
+	local character = player.Character or player.CharacterAdded:Wait()
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	local destination = teleportLocations[key]
+	if destination and hrp then
+		hrp.CFrame = CFrame.new(destination)
+	end
+end
+
+local function getClosestPlayerInSight()
+	local camera = workspace.CurrentCamera
+	local closestPlayer = nil
+	local smallestAngle = math.huge
+
+	for _, otherPlayer in ipairs(Players:GetPlayers()) do
+		if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			local hrp = otherPlayer.Character.HumanoidRootPart
+			local dirToPlayer = (hrp.Position - camera.CFrame.Position).Unit
+			local angle = math.acos(camera.CFrame.LookVector:Dot(dirToPlayer))
+			if angle < math.rad(30) and angle < smallestAngle then
+				smallestAngle = angle
+				closestPlayer = otherPlayer
+			end
+		end
+	end
+
+	return closestPlayer
+end
+
+local function toggleFollow()
+	if not following then
+		currentTarget = getClosestPlayerInSight()
+		if currentTarget then
+			following = true
+			warn("🔁 Đang bám theo:", currentTarget.Name)
+		else
+			warn("❌ Không tìm thấy người chơi trong tầm nhìn.")
+		end
+	else
+		following = false
+		currentTarget = nil
+		print("⛔ Đã dừng bám theo.")
+	end
+end
+
+-- Cập nhật vị trí khi bám theo
+RunService.RenderStepped:Connect(function()
+	if following and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
+		local targetHRP = currentTarget.Character.HumanoidRootPart
+		local myChar = player.Character or player.CharacterAdded:Wait()
+		local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+		if myHRP then
+			local offset = -targetHRP.CFrame.LookVector * followDistance
+			myHRP.CFrame = CFrame.new(targetHRP.Position + offset, targetHRP.Position)
+		end
+	end
+end)
+
+-- Tự bật lại khi hồi sinh
+player.CharacterAdded:Connect(function()
+	if flying then
+		task.wait(1)
+		startFlying()
+	end
+end)
+
+-- ================= GUI =================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ControlPanel"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Icon mở lại
+local minimizedIcon = Instance.new("TextButton")
+minimizedIcon.Size = UDim2.new(0, 120, 0, 40)
+minimizedIcon.Position = UDim2.new(0, 20, 1, -60)
+minimizedIcon.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+minimizedIcon.Text = "📂 OPEN"
+minimizedIcon.TextColor3 = Color3.new(1, 1, 1)
+minimizedIcon.Font = Enum.Font.SourceSansBold
+minimizedIcon.TextSize = 18
+minimizedIcon.Visible = false
+minimizedIcon.Parent = screenGui
+
+-- Frame chính
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 300, 0, 260)
+frame.Position = UDim2.new(0, 20, 0.5, -130)
+frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.BorderSizePixel = 0
+frame.Active = true -- Cho phép kéo
+frame.Draggable = true -- ✅ Có thể kéo
+frame.Parent = screenGui
+
+-- Khi bấm mở lại bảng
+minimizedIcon.MouseButton1Click:Connect(function()
+	frame.Visible = true
+	minimizedIcon.Visible = false
+end)
+
+-- Danh sách dọc
+local uiList = Instance.new("UIListLayout")
+uiList.Padding = UDim.new(0, 10)
+uiList.FillDirection = Enum.FillDirection.Vertical
+uiList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+uiList.VerticalAlignment = Enum.VerticalAlignment.Center
+uiList.Parent = frame
+
+-- Tạo nút
+local function createButton(text, callback)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0, 260, 0, 40)
+	btn.Text = text
+	btn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+	btn.TextColor3 = Color3.new(1, 1, 1)
+	btn.Font = Enum.Font.SourceSansBold
+	btn.TextSize = 22
+	btn.AutoButtonColor = true
+	btn.Parent = frame
+	btn.MouseButton1Click:Connect(callback)
+end
+
+-- Các nút chức năng
+createButton("🚀 Fly", toggleFlying)
+createButton("🌀 Void tele", function() teleportCharacter("C") end)
+createButton("⚡ Back to ground", function() teleportCharacter("V") end)
+createButton("🎯 tele behind player", toggleFollow)
+createButton("❌ Hide UI", function()
+	frame.Visible = false
+	minimizedIcon.Visible = true
+end)
