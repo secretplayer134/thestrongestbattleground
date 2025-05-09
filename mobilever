@@ -143,8 +143,8 @@ minimizedIcon.Parent = screenGui
 
 -- Frame chính
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 300, 0, 260)
-frame.Position = UDim2.new(0, 20, 0.5, -130)
+frame.Size = UDim2.new(0, 300, 0, 370)
+frame.Position = UDim2.new(0, 20, 0.5, -185)
 frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 frame.BorderSizePixel = 0
 frame.Active = true
@@ -179,12 +179,22 @@ local function createButton(text, callback, posY)
 	btn.MouseButton1Click:Connect(callback)
 end
 
--- Các nút chức năng
-createButton("🚀 Fly", toggleFlying, 10)
-createButton("🌀 Void tele", function() teleportCharacter("C") end, 60)
-createButton("⚡ Back to ground", function() teleportCharacter("V") end, 110)
-createButton("🎯 Tele behind player", toggleFollow, 160)
+-- Các nút chức năng (sắp xếp lại vị trí)
+createButton("⏫ Faster Fly", function()
+	speed = speed + 25
+	warn("⚡ Tốc độ tăng lên:", speed)
+end, 10)
+
+createButton("⏬ Slower Fly", function()
+	speed = math.max(25, speed - 25)
+	warn("🐢 Tốc độ giảm xuống:", speed)
+end, 60)
+
+createButton("🚀 Fly", toggleFlying, 110)
+createButton("🌀 Void tele", function() teleportCharacter("C") end, 160)
+createButton("⚡ Back to ground", function() teleportCharacter("V") end, 210)
+createButton("🎯 Tele behind player", toggleFollow, 260)
 createButton("❌ Hide UI", function()
 	frame.Visible = false
 	minimizedIcon.Visible = true
-end, 210)
+end, 310)
