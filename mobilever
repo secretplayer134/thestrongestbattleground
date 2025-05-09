@@ -127,7 +127,7 @@ screenGui.Name = "ControlPanel"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Icon mở lại
+-- Icon mở lại (có thể kéo)
 local minimizedIcon = Instance.new("TextButton")
 minimizedIcon.Size = UDim2.new(0, 120, 0, 40)
 minimizedIcon.Position = UDim2.new(0, 20, 1, -60)
@@ -137,6 +137,8 @@ minimizedIcon.TextColor3 = Color3.new(1, 1, 1)
 minimizedIcon.Font = Enum.Font.SourceSansBold
 minimizedIcon.TextSize = 18
 minimizedIcon.Visible = false
+minimizedIcon.Active = true
+minimizedIcon.Draggable = true
 minimizedIcon.Parent = screenGui
 
 -- Frame chính
@@ -145,8 +147,8 @@ frame.Size = UDim2.new(0, 300, 0, 260)
 frame.Position = UDim2.new(0, 20, 0.5, -130)
 frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 frame.BorderSizePixel = 0
-frame.Active = true -- Cho phép kéo
-frame.Draggable = true -- ✅ Có thể kéo
+frame.Active = true
+frame.Draggable = true
 frame.Parent = screenGui
 
 -- Khi bấm mở lại bảng
@@ -155,34 +157,34 @@ minimizedIcon.MouseButton1Click:Connect(function()
 	minimizedIcon.Visible = false
 end)
 
--- Danh sách dọc
-local uiList = Instance.new("UIListLayout")
-uiList.Padding = UDim.new(0, 10)
-uiList.FillDirection = Enum.FillDirection.Vertical
-uiList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-uiList.VerticalAlignment = Enum.VerticalAlignment.Center
-uiList.Parent = frame
+-- Tạo nút có thể kéo độc lập
+local function createButton(text, callback, posY)
+	local container = Instance.new("Frame")
+	container.Size = UDim2.new(0, 260, 0, 40)
+	container.Position = UDim2.new(0, 20, 0, posY)
+	container.BackgroundTransparency = 1
+	container.Active = true
+	container.Draggable = true
+	container.Parent = frame
 
--- Tạo nút
-local function createButton(text, callback)
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 260, 0, 40)
+	btn.Size = UDim2.new(1, 0, 1, 0)
 	btn.Text = text
 	btn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
 	btn.TextColor3 = Color3.new(1, 1, 1)
 	btn.Font = Enum.Font.SourceSansBold
 	btn.TextSize = 22
 	btn.AutoButtonColor = true
-	btn.Parent = frame
+	btn.Parent = container
 	btn.MouseButton1Click:Connect(callback)
 end
 
 -- Các nút chức năng
-createButton("🚀 Fly", toggleFlying)
-createButton("🌀 Void tele", function() teleportCharacter("C") end)
-createButton("⚡ Back to ground", function() teleportCharacter("V") end)
-createButton("🎯 tele behind player", toggleFollow)
+createButton("🚀 Fly", toggleFlying, 10)
+createButton("🌀 Void tele", function() teleportCharacter("C") end, 60)
+createButton("⚡ Back to ground", function() teleportCharacter("V") end, 110)
+createButton("🎯 Tele behind player", toggleFollow, 160)
 createButton("❌ Hide UI", function()
 	frame.Visible = false
 	minimizedIcon.Visible = true
-end)
+end, 210)
