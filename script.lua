@@ -15,7 +15,7 @@ local following = false
 local currentTarget = nil
 
 local teleportLocations = {
-	C = Vector3.new(-450, 760, 250),
+	C = Vector3.new( 0, 0, 0),
 	V = Vector3.new(100, 442, -10)
 }
 
