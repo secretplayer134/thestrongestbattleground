@@ -1,3 +1,5 @@
+-- 📁 LocalScript trong StarterPlayerScripts
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -8,12 +10,9 @@ local flySpeed = 100
 local followDistance = 2
 local following = false
 local currentTarget = nil
-local noclip = false
+local noclipEnabled = false
 
-local infoLabels = {}
-local guiVisible = true
-
--- 📦 Các vị trí dịch chuyển
+-- 🔀 Tọa độ dịch chuyển
 local teleportLocations = {
 	C = Vector3.new(10000, 0, 0),
 	V = Vector3.new(100, 442, -10)
@@ -38,6 +37,7 @@ end
 local function startFlying()
 	if flying then return end
 	flying = true
+
 	local character = player.Character or player.CharacterAdded:Wait()
 	local hrp = character:WaitForChild("HumanoidRootPart")
 	createFlyParts(hrp)
@@ -68,6 +68,7 @@ local function getClosestPlayerInSight()
 			local hrp = otherPlayer.Character.HumanoidRootPart
 			local dirToPlayer = (hrp.Position - camera.CFrame.Position).Unit
 			local angle = math.acos(camera.CFrame.LookVector:Dot(dirToPlayer))
+
 			if angle < math.rad(30) and angle < smallestAngle then
 				smallestAngle = angle
 				closestPlayer = otherPlayer
@@ -78,119 +79,7 @@ local function getClosestPlayerInSight()
 	return closestPlayer
 end
 
--- 📍 Dịch chuyển
-local function teleportCharacter(key)
-	local character = player.Character or player.CharacterAdded:Wait()
-	local hrp = character:FindFirstChild("HumanoidRootPart")
-	local destination = teleportLocations[key]
-	if destination and hrp then
-		hrp.CFrame = CFrame.new(destination)
-	end
-end
-
--- 🔄 Cập nhật GUI
-local function updateInfo()
-	infoLabels[1].Text = "fly speed: " .. tostring(flySpeed)
-	infoLabels[2].Text = "R to fly"
-	infoLabels[3].Text = "E to follow player"
-	infoLabels[4].Text = "distance: " .. tostring(followDistance)
-	infoLabels[5].Text = "Right Shift to show/hide GUI"
-	infoLabels[6].Text = "noclip: " .. (noclip and "ON" or "OFF") .. " | T to toggle"
-end
-
--- 📦 Tạo GUI
-local function createGUI()
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "FlyMenuGui"
-	gui.ResetOnSpawn = false
-	gui.Enabled = true
-	gui.Parent = player:WaitForChild("PlayerGui")
-
-	local frame = Instance.new("Frame")
-	frame.Name = "MainFrame"
-	frame.Size = UDim2.new(0, 300, 0, 280)
-	frame.Position = UDim2.new(1, -310, 1, -290)
-	frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	frame.BorderSizePixel = 0
-	frame.Visible = true
-	frame.Parent = gui
-
-	for i = 1, 6 do
-		local label = Instance.new("TextLabel")
-		label.Name = "Info" .. i
-		label.Size = UDim2.new(1, -10, 0, 25)
-		label.Position = UDim2.new(0, 5, 0, 5 + (i - 1) * 26)
-		label.BackgroundTransparency = 1
-		label.TextColor3 = Color3.new(1, 1, 1)
-		label.Font = Enum.Font.Gotham
-		label.TextSize = 14
-		label.Text = ""
-		label.TextXAlignment = Enum.TextXAlignment.Left
-		label.Parent = frame
-		infoLabels[i] = label
-	end
-
-	local function createButton(name, text, yPos)
-		local btn = Instance.new("TextButton")
-		btn.Name = name
-		btn.Size = UDim2.new(1, -10, 0, 30)
-		btn.Position = UDim2.new(0, 5, 0, yPos)
-		btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-		btn.TextColor3 = Color3.new(1, 1, 1)
-		btn.Font = Enum.Font.GothamBold
-		btn.TextSize = 14
-		btn.Text = text
-		btn.Parent = frame
-		return btn
-	end
-
-	local increaseBtn = createButton("IncreaseSpeedBtn", "faster", 180)
-	local decreaseBtn = createButton("DecreaseSpeedBtn", "slower", 215)
-	local adjustFollowBtn = createButton("AdjustFollowBtn", "adjust distance (max: 10)", 250)
-
-	increaseBtn.MouseButton1Click:Connect(function()
-		flySpeed += 10
-		updateInfo()
-	end)
-
-	decreaseBtn.MouseButton1Click:Connect(function()
-		flySpeed = math.max(10, flySpeed - 10)
-		updateInfo()
-	end)
-
-	adjustFollowBtn.MouseButton1Click:Connect(function()
-		followDistance += 1
-		if followDistance > 10 then followDistance = 1 end
-		updateInfo()
-	end)
-
-	-- Ẩn/hiện GUI với RightShift
-	UserInputService.InputBegan:Connect(function(input, gameProcessed)
-		if input.KeyCode == Enum.KeyCode.RightShift then
-			guiVisible = not guiVisible
-			gui.Enabled = guiVisible
-		end
-	end)
-
-	updateInfo()
-end
-
--- 🚀 Khởi tạo GUI
-createGUI()
-
--- 🔄 Theo dõi và noclip
-RunService.Stepped:Connect(function()
-	if noclip then
-		local char = player.Character
-		if char then
-			for _, part in pairs(char:GetDescendants()) do
-				if part:IsA("BasePart") then
-					part.CanCollide = false
-				end
-			end
-		end
-	end
-
+RunService.RenderStepped:Connect(function()
 	if following and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
 		local targetHRP = currentTarget.Character.HumanoidRootPart
 		local myChar = player.Character or player.CharacterAdded:Wait()
@@ -211,23 +100,141 @@ player.CharacterAdded:Connect(function()
 	end
 end)
 
--- ⌨️ Điều khiển phím
+-- 🧭 Dịch chuyển nhanh
+local function teleportCharacter(key)
+	local character = player.Character or player.CharacterAdded:Wait()
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	local destination = teleportLocations[key]
+
+	if destination and hrp then
+		hrp.CFrame = CFrame.new(destination)
+	end
+end
+
+-- 🧱 Noclip
+local noclipConn
+local function setNoclip(state)
+	noclipEnabled = state
+	if noclipConn then
+		noclipConn:Disconnect()
+	end
+
+	if state then
+		noclipConn = RunService.Stepped:Connect(function()
+			local character = player.Character
+			if character then
+				for _, part in pairs(character:GetDescendants()) do
+					if part:IsA("BasePart") then
+						part.CanCollide = false
+					end
+				end
+			end
+		end)
+	end
+end
+
+-- 📦 Tạo GUI
+local guiFrame, infoLabels
+
+local function updateInfo()
+	infoLabels[1].Text = "fly speed: " .. tostring(flySpeed)
+	infoLabels[2].Text = "R to fly"
+	infoLabels[3].Text = "E to follow player"
+	infoLabels[4].Text = "T to toggle noclip: " .. (noclipEnabled and "on" or "off")
+	infoLabels[5].Text = "Right Shift to close/open"
+end
+
+local function createGUI()
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "FlyMenuGui"
+	gui.ResetOnSpawn = false
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	guiFrame = Instance.new("Frame")
+	guiFrame.Name = "MainFrame"
+	guiFrame.Size = UDim2.new(0, 300, 0, 250)
+	guiFrame.Position = UDim2.new(1, -310, 1, -260)
+	guiFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	guiFrame.BorderSizePixel = 0
+	guiFrame.Visible = false
+	guiFrame.Parent = gui
+
+	infoLabels = {}
+	for i = 1, 5 do
+		local label = Instance.new("TextLabel")
+		label.Name = "Info" .. i
+		label.Size = UDim2.new(1, -10, 0, 25)
+		label.Position = UDim2.new(0, 5, 0, 5 + (i - 1) * 26)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = Color3.new(1, 1, 1)
+		label.Font = Enum.Font.Gotham
+		label.TextSize = 14
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.Parent = guiFrame
+		infoLabels[i] = label
+	end
+
+	local function createButton(name, text, yPos)
+		local btn = Instance.new("TextButton")
+		btn.Name = name
+		btn.Size = UDim2.new(1, -10, 0, 30)
+		btn.Position = UDim2.new(0, 5, 0, yPos)
+		btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+		btn.TextColor3 = Color3.new(1, 1, 1)
+		btn.Font = Enum.Font.GothamBold
+		btn.TextSize = 14
+		btn.Text = text
+		btn.Parent = guiFrame
+		return btn
+	end
+
+	local increaseBtn = createButton("IncreaseSpeedBtn", "faster", 140)
+	local decreaseBtn = createButton("DecreaseSpeedBtn", "slower", 175)
+	local adjustFollowBtn = createButton("AdjustFollowBtn", "adjust distance (max: 10)", 210)
+
+	increaseBtn.MouseButton1Click:Connect(function()
+		flySpeed += 10
+		updateInfo()
+	end)
+
+	decreaseBtn.MouseButton1Click:Connect(function()
+		flySpeed = math.max(10, flySpeed - 10)
+		updateInfo()
+	end)
+
+	adjustFollowBtn.MouseButton1Click:Connect(function()
+		followDistance += 1
+		if followDistance > 10 then followDistance = 1 end
+		updateInfo()
+	end)
+
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if input.KeyCode == Enum.KeyCode.RightShift then
+			guiFrame.Visible = not guiFrame.Visible
+			updateInfo()
+		end
+	end)
+
+	updateInfo()
+end
+
+createGUI()
+
+-- 🎮 Điều khiển phím bấm
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 
-	local key = input.KeyCode
-
-	if key == Enum.KeyCode.R then
+	if input.KeyCode == Enum.KeyCode.R then
 		if flying then stopFlying() else startFlying() end
 		updateInfo()
-	elseif key == Enum.KeyCode.T then
-		noclip = not noclip
-		updateInfo()
-	elseif key == Enum.KeyCode.C then
+
+	elseif input.KeyCode == Enum.KeyCode.C then
 		teleportCharacter("C")
-	elseif key == Enum.KeyCode.V then
+
+	elseif input.KeyCode == Enum.KeyCode.V then
 		teleportCharacter("V")
-	elseif key == Enum.KeyCode.E then
+
+	elseif input.KeyCode == Enum.KeyCode.E then
 		if not following then
 			currentTarget = getClosestPlayerInSight()
 			if currentTarget then
@@ -237,5 +244,26 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			following = false
 			currentTarget = nil
 		end
+
+	elseif input.KeyCode == Enum.KeyCode.T then
+		noclipEnabled = not noclipEnabled
+		setNoclip(noclipEnabled)
+		updateInfo()
+
+	elseif input.KeyCode == Enum.KeyCode.KeypadOne then
+		flySpeed = 50
+		updateInfo()
+
+	elseif input.KeyCode == Enum.KeyCode.KeypadTwo then
+		flySpeed = 100
+		updateInfo()
+
+	elseif input.KeyCode == Enum.KeyCode.KeypadThree then
+		flySpeed = 150
+		updateInfo()
+
+	elseif input.KeyCode == Enum.KeyCode.KeypadFour then
+		flySpeed = 200
+		updateInfo()
 	end
 end)
