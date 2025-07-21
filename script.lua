@@ -80,5 +80,56 @@ updateInfo()
 
 end
 
--- 🧲 Theo dõi người gần nhất local function getClosestPlayer() local minDist = math.huge local closest = nil for _, other in ipairs(Players:GetPlayers()) do if other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then local dist = (other.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude if dist < minDist then minDist = dist closest = other end end end
+-- 🧲 Theo dõi người gần nhất local function getClosestPlayer() local minDist = math.huge local closest = nil for _, other in ipairs(Players:GetPlayers()) do if other ~= player and other.Character and other.Character:FindFirstChild("HumanoidRootPart") then local dist = (other.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude if dist < minDist then minDist = dist closest = other end end end return closest end
+
+-- 🕹️ Nhập phím điều khiển UserInputService.InputBegan:Connect(function(input, gameProcessed) if gameProcessed or isTyping then return end
+
+local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+if not hrp then return end
+
+if input.KeyCode == Enum.KeyCode.E then
+	flying = not flying
+	if flying then
+		noclip = true
+	end
+elseif input.KeyCode == Enum.KeyCode.T then
+	noclip = not noclip
+elseif input.KeyCode == Enum.KeyCode.C then
+	hrPosition = Vector3.new(10000, 0, 0)
+	hr.CFrame = CFrame.new(hrPosition)
+elseif input.KeyCode == Enum.KeyCode.R then
+	currentTarget = getClosestPlayer()
+	following = currentTarget ~= nil
+elseif input.KeyCode == Enum.KeyCode.Q then
+	following = false
+	currentTarget = nil
+end
+updateInfo()
+
+end)
+
+-- ☁️ Chuyển động bay và theo người RunService.RenderStepped:Connect(function() if flying and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then local hrp = player.Character.HumanoidRootPart local moveDir = Vector3.zero if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir += camera.CFrame.LookVector end if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir -= camera.CFrame.LookVector end if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir -= camera.CFrame.RightVector end if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir += camera.CFrame.RightVector end if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir += camera.CFrame.UpVector end if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir -= camera.CFrame.UpVector end
+
+hr.CFrame += moveDir.Unit * flySpeed * RunService.RenderStepped:Wait()
+end
+
+if following and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
+	local targetPos = currentTarget.Character.HumanoidRootPart.Position + Vector3.new(0, followDistance, 0)
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		hr.CFrame = hrp.CFrame:Lerp(CFrame.new(targetPos), 0.1)
+	end
+end
+
+if noclip and player.Character then
+	for _, part in ipairs(player.Character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = false
+		end
+	end
+end
+
+end)
+
+-- 🔧 Gọi hàm tạo GUI createGUI()
 
