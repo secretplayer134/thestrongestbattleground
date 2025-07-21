@@ -1,5 +1,3 @@
--- 📁 LocalScript trong StarterPlayerScripts
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -10,9 +8,11 @@ local flySpeed = 100
 local followDistance = 2
 local following = false
 local currentTarget = nil
-local isTyping = false
+local noclip = false
 
--- 🔀 Tọa độ dịch chuyển
+local infoLabels = {}
+
+-- 📦 Vị trí dịch chuyển
 local teleportLocations = {
     C = Vector3.new(10000, 0, 0),
     V = Vector3.new(100, 442, -10)
@@ -37,7 +37,6 @@ end
 local function startFlying()
     if flying then return end
     flying = true
-
     local character = player.Character or player.CharacterAdded:Wait()
     local hrp = character:WaitForChild("HumanoidRootPart")
     createFlyParts(hrp)
@@ -57,7 +56,17 @@ local function stopFlying()
     if bv then bv:Destroy() end
 end
 
--- 🧍‍♂️ Theo người chơi
+-- 📍 Dịch chuyển
+local function teleportCharacter(key)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local destination = teleportLocations[key]
+    if destination and hrp then
+        hrp.CFrame = CFrame.new(destination)
+    end
+end
+
+-- 🧍‍♂️ Tìm người gần nhất đang nhìn
 local function getClosestPlayerInSight()
     local camera = workspace.CurrentCamera
     local closestPlayer = nil
@@ -68,7 +77,6 @@ local function getClosestPlayerInSight()
             local hrp = otherPlayer.Character.HumanoidRootPart
             local dirToPlayer = (hrp.Position - camera.CFrame.Position).Unit
             local angle = math.acos(camera.CFrame.LookVector:Dot(dirToPlayer))
-
             if angle < math.rad(30) and angle < smallestAngle then
                 smallestAngle = angle
                 closestPlayer = otherPlayer
@@ -79,36 +87,13 @@ local function getClosestPlayerInSight()
     return closestPlayer
 end
 
-RunService.RenderStepped:Connect(function()
-    if following and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        local targetHRP = currentTarget.Character.HumanoidRootPart
-        local myChar = player.Character or player.CharacterAdded:Wait()
-        local myHRP = myChar:FindFirstChild("HumanoidRootPart")
-
-        if myHRP then
-            local offset = -targetHRP.CFrame.LookVector * followDistance
-            local newPos = targetHRP.Position + offset
-            myHRP.CFrame = CFrame.new(newPos, targetHRP.Position)
-        end
-    end
-end)
-
-player.CharacterAdded:Connect(function()
-    if flying then
-        task.wait(1)
-        startFlying()
-    end
-end)
-
--- 🧭 Dịch chuyển nhanh
-local function teleportCharacter(key)
-    local character = player.Character or player.CharacterAdded:Wait()
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    local destination = teleportLocations[key]
-
-    if destination and hrp then
-        hrp.CFrame = CFrame.new(destination)
-    end
+-- 🔄 Cập nhật GUI
+local function updateInfo()
+    infoLabels[1].Text = "fly speed: " .. tostring(flySpeed)
+    infoLabels[2].Text = "R to fly"
+    infoLabels[3].Text = "E to follow player"
+    infoLabels[4].Text = "distance: " .. tostring(followDistance)
+    infoLabels[5].Text = "noclip: " .. (noclip and "ON" or "OFF") .. " | T to toggle"
 end
 
 -- 📦 Tạo GUI
@@ -120,14 +105,13 @@ local function createGUI()
 
     local frame = Instance.new("Frame")
     frame.Name = "MainFrame"
-    frame.Size = UDim2.new(0, 300, 0, 250)
-    frame.Position = UDim2.new(1, -310, 1, -260)
+    frame.Size = UDim2.new(0, 300, 0, 260)
+    frame.Position = UDim2.new(1, -310, 1, -270)
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     frame.BorderSizePixel = 0
-    frame.Visible = false
+    frame.Visible = true
     frame.Parent = gui
 
-    local infoLabels = {}
     for i = 1, 5 do
         local label = Instance.new("TextLabel")
         label.Name = "Info" .. i
@@ -137,8 +121,8 @@ local function createGUI()
         label.TextColor3 = Color3.new(1, 1, 1)
         label.Font = Enum.Font.Gotham
         label.TextSize = 14
-        label.TextXAlignment = Enum.TextXAlignment.Left
         label.Text = ""
+        label.TextXAlignment = Enum.TextXAlignment.Left
         label.Parent = frame
         infoLabels[i] = label
     end
@@ -157,17 +141,9 @@ local function createGUI()
         return btn
     end
 
-    local increaseBtn = createButton("IncreaseSpeedBtn", "faster", 140)
-    local decreaseBtn = createButton("DecreaseSpeedBtn", "slower", 175)
-    local adjustFollowBtn = createButton("AdjustFollowBtn", "adjust distance (max: 10)", 210)
-
-    local function updateInfo()
-        infoLabels[1].Text = "fly speed: " .. tostring(flySpeed)
-        infoLabels[2].Text = "R to fly"
-        infoLabels[3].Text = "E to follow player"
-        infoLabels[4].Text = "distance: " .. tostring(followDistance)
-        infoLabels[5].Text = "Right Shift to close/open"
-    end
+    local increaseBtn = createButton("IncreaseSpeedBtn", "faster", 160)
+    local decreaseBtn = createButton("DecreaseSpeedBtn", "slower", 195)
+    local adjustFollowBtn = createButton("AdjustFollowBtn", "adjust distance (max: 10)", 230)
 
     increaseBtn.MouseButton1Click:Connect(function()
         flySpeed += 10
@@ -185,31 +161,62 @@ local function createGUI()
         updateInfo()
     end)
 
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if input.KeyCode == Enum.KeyCode.RightShift then
-            frame.Visible = not frame.Visible
-            updateInfo()
-        end
-    end)
-
     updateInfo()
 end
 
 createGUI()
 
--- 🎮 Điều khiển phím bấm
+-- 🔄 Noclip & Theo dõi
+RunService.Stepped:Connect(function()
+    if noclip then
+        local char = player.Character
+        if char then
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+
+    if following and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
+        local targetHRP = currentTarget.Character.HumanoidRootPart
+        local myChar = player.Character or player.CharacterAdded:Wait()
+        local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+
+        if myHRP then
+            local offset = -targetHRP.CFrame.LookVector * followDistance
+            local newPos = targetHRP.Position + offset
+            myHRP.CFrame = CFrame.new(newPos, targetHRP.Position)
+        end
+    end
+end)
+
+-- 🔄 Bật lại bay nếu respawn
+player.CharacterAdded:Connect(function()
+    if flying then
+        task.wait(1)
+        startFlying()
+    end
+end)
+
+-- ⌨️ Điều khiển phím
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
 
-    if input.KeyCode == Enum.KeyCode.R then
+    local key = input.KeyCode
+
+    if key == Enum.KeyCode.R then
         if flying then stopFlying() else startFlying() end
-
-    elseif input.KeyCode == Enum.KeyCode.C then
+        updateInfo()
+    elseif key == Enum.KeyCode.T then
+        noclip = not noclip
+        updateInfo()
+    elseif key == Enum.KeyCode.C then
         teleportCharacter("C")
-    elseif input.KeyCode == Enum.KeyCode.V then
+    elseif key == Enum.KeyCode.V then
         teleportCharacter("V")
-
-    elseif input.KeyCode == Enum.KeyCode.E then
+    elseif key == Enum.KeyCode.E then
         if not following then
             currentTarget = getClosestPlayerInSight()
             if currentTarget then
@@ -219,17 +226,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             following = false
             currentTarget = nil
         end
-    elseif input.KeyCode == Enum.KeyCode.KeypadOne then
-        flySpeed = 50
-        updateInfo()
-    elseif input.KeyCode == Enum.KeyCode.KeypadTwo then
-        flySpeed = 100
-        updateInfo()
-    elseif input.KeyCode == Enum.KeyCode.KeypadThree then
-        flySpeed = 150
-        updateInfo()
-    elseif input.KeyCode == Enum.KeyCode.KeypadFour then
-        flySpeed = 200
         updateInfo()
     end
 end)
