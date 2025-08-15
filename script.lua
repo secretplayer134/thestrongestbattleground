@@ -153,7 +153,7 @@ local function updateInfo()
     infoLabels[5].Text = "R to fly"
     infoLabels[6].Text = "T to turn on/off noclip "
     infoLabels[7].Text = "Y to teleport"
-    infoLabels[8].Text = "V to go to void and V again to go back to the ground (For TSB)" 
+    infoLabels[8].Text = "V tp to void, V again tp to ground (For TSB)" 
     infoLabels[9].Text = "Rightshift to turn on/off the instruction"
 end
 
