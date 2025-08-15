@@ -1,113 +1,115 @@
--- Script cho executor, tạo Tool + GUI
-
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
--- Tạo Tool nếu chưa có
-local backpack = player:WaitForChild("Backpack")
-local tool = Instance.new("Tool")
-tool.Name = "Instruction"
-tool.RequiresHandle = false
-tool.Parent = backpack
+local function createTool()
+	local backpack = player:WaitForChild("Backpack")
+	if backpack:FindFirstChild("Instruction") then return end
+	
+	local tool = Instance.new("Tool")
+	tool.Name = "Instruction"
+	tool.RequiresHandle = false
+	tool.Parent = backpack
+end
 
--- Tạo GUI
+createTool()
+
+player.CharacterAdded:Connect(function()
+	task.wait(0.5)
+	createTool()
+end)
+
 local function createInstructionGUI()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "InstructionGUI"
-    gui.ResetOnSpawn = false
-    gui.Parent = player:WaitForChild("PlayerGui")
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "InstructionGUI"
+	gui.ResetOnSpawn = false
+	gui.Parent = player:WaitForChild("PlayerGui")
 
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 350, 0, 153) -- tăng thêm 0.5 dòng từ 137 -> 153
-    frame.Position = UDim2.new(0.5, -175, 0.5, -76)
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    frame.BorderSizePixel = 0
-    frame.Visible = false
-    frame.Parent = gui
-    frame.AnchorPoint = Vector2.new(0.5,0.5)
-    frame.ClipsDescendants = true
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 350, 0, 153)
+	frame.Position = UDim2.new(0.5, -175, 0.5, -76)
+	frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	frame.BorderSizePixel = 0
+	frame.Visible = false
+	frame.Parent = gui
+	frame.AnchorPoint = Vector2.new(0.5,0.5)
+	frame.ClipsDescendants = true
 
-    -- Nút icon X đỏ
-    local closeBtn = Instance.new("ImageButton")
-    closeBtn.Size = UDim2.new(0, 35, 0, 35)
-    closeBtn.Position = UDim2.new(1, -45, 0, 5)
-    closeBtn.Image = "rbxassetid://6031094678" -- icon X đỏ
-    closeBtn.BackgroundTransparency = 1
-    closeBtn.Parent = frame
-    closeBtn.MouseButton1Click:Connect(function()
-        frame.Visible = false
-    end)
+	local closeBtn = Instance.new("ImageButton")
+	closeBtn.Size = UDim2.new(0, 35, 0, 35)
+	closeBtn.Position = UDim2.new(1, -45, 0, 5)
+	closeBtn.Image = "rbxassetid://6031094678"
+	closeBtn.BackgroundTransparency = 1
+	closeBtn.Parent = frame
+	closeBtn.MouseButton1Click:Connect(function()
+		frame.Visible = false
+	end)
 
-    -- 8 dòng hướng dẫn
-    local instructions = {
-        "E to follow player",
-        "R to fly",
-        "T to toggle noclip",
-        "Y to teleport",
-        "V to go back to ground (for TSB)",
-        "C to teleport to void",
-        "You can zoom as far as you want",
-        "RightShift to open another GUI"
-    }
+	local instructions = {
+		"E to follow player",
+		"R to fly",
+		"T to toggle noclip",
+		"Y to teleport",
+		"V to go back to ground (for TSB)",
+		"C to teleport to void",
+		"You can zoom as far as you want",
+		"RightShift to open another GUI"
+	}
 
-    local lineHeight = 17
-    local topOffset = 10
+	local lineHeight = 17
+	local topOffset = 10
+	for i, text in ipairs(instructions) do
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, -20, 0, lineHeight)
+		label.Position = UDim2.new(0, 10, 0, topOffset + (i-1)*lineHeight)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = Color3.new(1,1,1)
+		label.Font = Enum.Font.GothamBold
+		label.TextSize = 16
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.Text = text
+		label.Parent = frame
+	end
 
-    for i, text in ipairs(instructions) do
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, -20, 0, lineHeight)
-        label.Position = UDim2.new(0, 10, 0, topOffset + (i-1)*lineHeight)
-        label.BackgroundTransparency = 1
-        label.TextColor3 = Color3.new(1,1,1)
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 16
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Text = text
-        label.Parent = frame
-    end
+	local dragging, dragInput, dragStart, startPos
+	local function update(input)
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
 
-    -- Kéo GUI
-    local dragging, dragInput, dragStart, startPos
-    local function update(input)
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+	frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+	end)
+	player:GetMouse().Move:Connect(function()
+		if dragging and dragInput then
+			update(dragInput)
+		end
+	end)
 
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-
-    player:GetMouse().Move:Connect(function()
-        if dragging and dragInput then
-            update(dragInput)
-        end
-    end)
-
-    return frame
+	return frame
 end
 
 local guiFrame = createInstructionGUI()
 
--- Khi Tool trên hotbar được chọn sẽ hiện GUI luôn
+local backpack = player:WaitForChild("Backpack")
+local tool = backpack:WaitForChild("Instruction")
 tool.Equipped:Connect(function()
-    guiFrame.Visible = true
-end)                                                                                                                                         -- 📁 LocalScript trong StarterPlayerScripts
+	guiFrame.Visible = true
+end)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -122,17 +124,14 @@ local following = false
 local currentTarget = nil
 local noclipEnabled = false
 
--- 🟢 Gỡ giới hạn zoom camera
 player.CameraMaxZoomDistance = 1e9
 player.CameraMinZoomDistance = 0.5
 
--- 🔀 Tọa độ dịch chuyển nhanh
 local teleportLocations = {
 	C = Vector3.new(10000, 0, 0),
 	V = Vector3.new(100, 442, -10)
 }
 
--- 💨 Bay
 local bg, bv, flyConn
 local function createFlyParts(hrp)
 	bg = Instance.new("BodyGyro")
@@ -168,7 +167,6 @@ local function stopFlying()
 	if bv then bv:Destroy() end
 end
 
--- 🧍‍♂️ Theo người chơi
 local function getClosestPlayerInSight()
 	local camera = workspace.CurrentCamera
 	local closestPlayer = nil
@@ -207,7 +205,6 @@ player.CharacterAdded:Connect(function()
 	end
 end)
 
--- 🧭 Dịch chuyển nhanh
 local function teleportCharacter(key)
 	local character = player.Character or player.CharacterAdded:Wait()
 	local hrp = character:FindFirstChild("HumanoidRootPart")
@@ -217,7 +214,6 @@ local function teleportCharacter(key)
 	end
 end
 
--- 🟡 Teleport tới vị trí chuột khi nhấn Y
 local function teleportToMouse()
 	local char = player.Character
 	if char and char:FindFirstChild("HumanoidRootPart") and mouse.Hit then
@@ -225,7 +221,6 @@ local function teleportToMouse()
 	end
 end
 
--- 🧱 Noclip
 local noclipConn
 local function setNoclip(state)
 	noclipEnabled = state
@@ -244,7 +239,6 @@ local function setNoclip(state)
 	end
 end
 
--- 📦 GUI rút gọn, giữ các nút điều chỉnh
 local guiFrame, infoLabels
 local function updateInfo()
 	infoLabels[1].Text = "Fly speed: " .. tostring(flySpeed)
@@ -266,7 +260,6 @@ local function createGUI()
 	guiFrame.Visible = false
 	guiFrame.Parent = gui
 
-	-- Info Labels
 	infoLabels = {}
 	for i = 1, 3 do
 		local lbl = Instance.new("TextLabel")
@@ -281,7 +274,6 @@ local function createGUI()
 		infoLabels[i] = lbl
 	end
 
-	-- Buttons
 	local function createButton(name, text, yPos)
 		local btn = Instance.new("TextButton")
 		btn.Name = name
@@ -326,7 +318,6 @@ end
 
 createGUI()
 
--- 🎮 Phím điều khiển
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 
@@ -355,4 +346,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 
 	updateInfo()
-end)                                                                                                                                      
+end)
