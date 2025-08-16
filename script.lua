@@ -142,10 +142,6 @@ end
 -- GUI
 local guiFrame, infoLabels
 local function updateInfo()
-    for i = 1, 9 do
-        infoLabels[i].Text = "Label " .. i
-    end
-    -- Cập nhật các thông tin cụ thể:
     infoLabels[1].Text = "Fly speed: " .. tostring(flySpeed)
     infoLabels[2].Text = "Noclip: " .. (noclipEnabled and "on" or "off")
     infoLabels[3].Text = "Follow distance: " .. tostring(followDistance)
@@ -154,7 +150,39 @@ local function updateInfo()
     infoLabels[6].Text = "T to turn on/off noclip "
     infoLabels[7].Text = "Y to teleport"
     infoLabels[8].Text = "V tp to void, V again tp to ground (For TSB)" 
-    infoLabels[9].Text = "Rightshift to turn on/off the instruction"
+    infoLabels[9].Text = "Rightshift to turn on/off menu"
+end
+
+local function makeDraggable(frame)
+    local dragging, dragInput, dragStart, startPos
+
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                       startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
 end
 
 local function createGUI()
@@ -164,14 +192,15 @@ local function createGUI()
     gui.Parent = player:WaitForChild("PlayerGui")
 
     guiFrame = Instance.new("Frame")
-    guiFrame.Size = UDim2.new(0, 300, 0, 420) -- đủ cho 9 label + 3 nút + padding
+    guiFrame.Size = UDim2.new(0, 300, 0, 420)
     guiFrame.Position = UDim2.new(1, -300, 0, 190)
     guiFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     guiFrame.BorderSizePixel = 0
     guiFrame.Visible = true
     guiFrame.Parent = gui
 
-    -- Tạo 9 label
+    makeDraggable(guiFrame) -- ✅ thêm drag cho GUI
+
     infoLabels = {}
     for i = 1, 9 do
         local lbl = Instance.new("TextLabel")
@@ -186,7 +215,7 @@ local function createGUI()
         infoLabels[i] = lbl
     end
 
-    -- Hàm tạo nút
+    -- Buttons
     local function createButton(name, text, yPos)
         local btn = Instance.new("TextButton")
         btn.Name = name
