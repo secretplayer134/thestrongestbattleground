@@ -193,7 +193,7 @@ local function createGUI()
 
     guiFrame = Instance.new("Frame")
     guiFrame.Size = UDim2.new(0, 300, 0, 420)
-    guiFrame.Position = UDim2.new(1, -300, 0, 190)
+    guiFrame.Position = UDim2.new(1, -300, 0, 242)
     guiFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     guiFrame.BorderSizePixel = 0
     guiFrame.Visible = true
